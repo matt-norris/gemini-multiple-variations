@@ -33,15 +33,94 @@ const IMAGE_SIZES = [
 
 const COUNTS = [1, 2, 3, 4, 5, 6, 7, 8];
 
+interface NegativePreset {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    prompts: string;
+}
+
+const NEGATIVE_PRESETS: NegativePreset[] = [
+    {
+        id: "general",
+        name: "General Quality",
+        icon: "\u2726",
+        color: "#a1a1aa",
+        prompts: "worst quality, low quality, blurry, pixelated, grainy, jpeg artifacts, watermark, text, signature, logo, overexposed, underexposed, cropped, out of frame, out of focus, ugly, error",
+    },
+    {
+        id: "photorealistic",
+        name: "Photorealistic",
+        icon: "\u25CB",
+        color: "#3b82f6",
+        prompts: "cartoon, anime, illustration, painting, drawing, sketch, 3d render, cgi, digital art, artwork, 2d, flat, monochrome, unrealistic, artificial, plastic, fake, bad photography, grainy, noisy, worst quality, blurry, watermark",
+    },
+    {
+        id: "cartoon",
+        name: "Cartoon / Illustration",
+        icon: "\u25B3",
+        color: "#f97316",
+        prompts: "photorealistic, realistic, photo, photography, 3d, hyperrealistic, unnatural shading, blurry outlines, uninspired, generic, amateurish, incomplete, messy, cluttered, unappealing colors, inconsistent art style, worst quality, watermark, text",
+    },
+    {
+        id: "portrait",
+        name: "Portrait",
+        icon: "\u25C7",
+        color: "#ec4899",
+        prompts: "bad anatomy, wrong anatomy, deformed, disfigured, mutated, extra limbs, extra fingers, missing fingers, poorly drawn hands, poorly drawn face, cloned face, asymmetrical face, distorted features, ugly textures, bad hair, long neck, flat lighting, awkward angles, stiff pose, unnatural expression, worst quality, blurry, watermark",
+    },
+    {
+        id: "landscape",
+        name: "Landscape / Nature",
+        icon: "\u25C6",
+        color: "#22c55e",
+        prompts: "people, person, buildings, urban, vehicles, cars, text, watermark, simple background, plain background, overexposed, underexposed, distorted, deformed structures, low contrast, dark, macro, portrait, multiple angles, white spots, worst quality, blurry",
+    },
+    {
+        id: "abstract",
+        name: "Abstract Art",
+        icon: "\u25CE",
+        color: "#a855f7",
+        prompts: "photorealistic, realistic, photo, text, watermark, logo, face, person, recognizable objects, cluttered, busy, muddy colors, low contrast, grainy, pixelated, worst quality, blurry, generic, cliched, low resolution",
+    },
+    {
+        id: "product",
+        name: "Product Shot",
+        icon: "\u25A1",
+        color: "#14b8a6",
+        prompts: "blurry, out of focus, bad lighting, harsh shadows, cluttered background, distracting elements, distorted, warped, low resolution, pixelated, watermark, text, logo, people, hands, worst quality, overexposed, underexposed, grainy",
+    },
+    {
+        id: "food",
+        name: "Food Photography",
+        icon: "\u25CF",
+        color: "#eab308",
+        prompts: "unappetizing, blurry, out of focus, bad lighting, harsh shadows, cluttered, messy background, distorted, artificial looking, plastic, overcooked, raw, worst quality, low resolution, watermark, text, people, hands, grainy, dull colors",
+    },
+];
+
 export default function Home() {
     const [prompt, setPrompt] = useState("");
     const [negativePrompt, setNegativePrompt] = useState("");
+    const [activePreset, setActivePreset] = useState<string | null>(null);
     const [count, setCount] = useState(4);
     const [aspectRatio, setAspectRatio] = useState("1:1");
     const [imageSize, setImageSize] = useState("1K");
     const [loading, setLoading] = useState(false);
     const [gallery, setGallery] = useState<GalleryItem[]>([]);
     const [completedCount, setCompletedCount] = useState(0);
+
+    const applyPreset = (preset: NegativePreset) => {
+        if (activePreset === preset.id) {
+            // Deselect
+            setActivePreset(null);
+            setNegativePrompt("");
+        } else {
+            setActivePreset(preset.id);
+            setNegativePrompt(preset.prompts);
+        }
+    };
 
     const handleGenerate = useCallback(async () => {
         if (!prompt.trim() || loading) return;
@@ -210,17 +289,50 @@ export default function Home() {
                         </div>
 
                         <div className="form-group">
+                            <label className="form-label">
+                                Negative Prompt Presets{" "}
+                                <span className="hint">(click to apply, then edit below)</span>
+                            </label>
+                            <div className="preset-grid">
+                                {NEGATIVE_PRESETS.map((preset) => (
+                                    <button
+                                        key={preset.id}
+                                        className={`preset-chip${activePreset === preset.id ? " active" : ""}`}
+                                        onClick={() => applyPreset(preset)}
+                                        disabled={loading}
+                                        style={
+                                            activePreset === preset.id
+                                                ? { borderColor: preset.color, color: preset.color, background: `${preset.color}10` }
+                                                : undefined
+                                        }
+                                    >
+                                        <span className="preset-icon" style={{ color: preset.color }}>{preset.icon}</span>
+                                        {preset.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="form-group">
                             <label className="form-label" htmlFor="negativePrompt">
                                 Negative Prompt{" "}
-                                <span className="hint">(things to avoid)</span>
+                                <span className="hint">(edit to customize further)</span>
                             </label>
-                            <input
+                            <textarea
                                 id="negativePrompt"
-                                className="text-input"
-                                type="text"
-                                placeholder="e.g. blurry, distorted, watermark, low quality..."
+                                className="negative-textarea"
+                                placeholder="Select a preset above or type your own negative prompts..."
                                 value={negativePrompt}
-                                onChange={(e) => setNegativePrompt(e.target.value)}
+                                onChange={(e) => {
+                                    setNegativePrompt(e.target.value);
+                                    // Clear active preset indicator if user edits away from it
+                                    if (activePreset) {
+                                        const preset = NEGATIVE_PRESETS.find((p) => p.id === activePreset);
+                                        if (preset && e.target.value !== preset.prompts) {
+                                            // Keep the preset visually but allow editing
+                                        }
+                                    }
+                                }}
                                 disabled={loading}
                             />
                         </div>
