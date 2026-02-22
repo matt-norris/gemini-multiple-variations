@@ -200,12 +200,29 @@ export default function Home() {
         }
     }, [prompt, negativePrompt, count, aspectRatio, imageSize, loading]);
 
-    const downloadImage = (item: GeneratedImage, idx: number) => {
-        const ext = item.mimeType?.split("/")[1] || "png";
-        const link = document.createElement("a");
-        link.href = `data:${item.mimeType};base64,${item.data}`;
-        link.download = `variation_${idx + 1}.${ext}`;
-        link.click();
+    const downloadImage = async (item: GeneratedImage, idx: number) => {
+        try {
+            const dataUrl = `data:${item.mimeType || "image/png"};base64,${item.data}`;
+            const res = await fetch(dataUrl);
+            const blob = await res.blob();
+            const pngBlob = new Blob([blob], { type: "image/png" });
+            const url = window.URL.createObjectURL(pngBlob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = `variation_${idx + 1}.png`;
+            document.body.appendChild(a);
+            a.click();
+            // Small delay before cleanup to ensure download starts
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        } catch (err) {
+            // Fallback: open in new tab if download fails
+            const dataUrl = `data:${item.mimeType || "image/png"};base64,${item.data}`;
+            window.open(dataUrl, "_blank");
+        }
     };
 
     return (
