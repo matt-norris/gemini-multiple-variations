@@ -128,7 +128,7 @@ export default function Home() {
     const [negativePrompt, setNegativePrompt] = useState("");
     const [activePreset, setActivePreset] = useState<string | null>(null);
     const [count, setCount] = useState(4);
-    const [aspectRatio, setAspectRatio] = useState("1:1");
+    const [aspectRatio, setAspectRatio] = useState("16:9");
     const [imageSize, setImageSize] = useState("1K");
     const [model, setModel] = useState<"pro" | "flash">("pro");
     const [enableSearch, setEnableSearch] = useState(false);
@@ -137,6 +137,7 @@ export default function Home() {
     const [completedCount, setCompletedCount] = useState(0);
     const [referenceImages, setReferenceImages] = useState<RefImage[]>([]);
     const [dragOver, setDragOver] = useState(false);
+    const [ratioCollapsed, setRatioCollapsed] = useState(true);
     const [lightboxItem, setLightboxItem] = useState<{ item: GeneratedImage; idx: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -404,23 +405,37 @@ export default function Home() {
 
                 {/* Aspect Ratio Selector */}
                 <div className="ratio-section">
-                    <span className="ratio-section-label">Aspect Ratio</span>
-                    <div className="ratio-grid">
-                        {ASPECT_RATIOS.map((ar) => (
-                            <button
-                                key={ar.value}
-                                className={`ratio-card${aspectRatio === ar.value ? " active" : ""}`}
-                                onClick={() => setAspectRatio(ar.value)}
-                                disabled={loading}
-                            >
-                                <div
-                                    className="ratio-preview"
-                                    style={{ width: ar.w, height: ar.h }}
-                                />
-                                <div className="ratio-label">{ar.label}</div>
-                                <div className="ratio-subtitle">{ar.subtitle}</div>
-                            </button>
-                        ))}
+                    <button
+                        className="ratio-section-toggle"
+                        onClick={() => setRatioCollapsed(!ratioCollapsed)}
+                        type="button"
+                    >
+                        <span className="ratio-section-label">Aspect Ratio</span>
+                        <span className="ratio-section-current">
+                            {ASPECT_RATIOS.find((ar) => ar.value === aspectRatio)?.label || aspectRatio}
+                            {" · "}
+                            {ASPECT_RATIOS.find((ar) => ar.value === aspectRatio)?.subtitle || ""}
+                        </span>
+                        <span className={`ratio-section-chevron${!ratioCollapsed ? " open" : ""}`}>&#x25BE;</span>
+                    </button>
+                    <div className={`ratio-grid-wrapper${ratioCollapsed ? " collapsed" : ""}`}>
+                        <div className="ratio-grid">
+                            {ASPECT_RATIOS.map((ar) => (
+                                <button
+                                    key={ar.value}
+                                    className={`ratio-card${aspectRatio === ar.value ? " active" : ""}`}
+                                    onClick={() => setAspectRatio(ar.value)}
+                                    disabled={loading}
+                                >
+                                    <div
+                                        className="ratio-preview"
+                                        style={{ width: ar.w, height: ar.h }}
+                                    />
+                                    <div className="ratio-label">{ar.label}</div>
+                                    <div className="ratio-subtitle">{ar.subtitle}</div>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
