@@ -26,11 +26,14 @@ interface ParsedPrompt {
 }
 
 const ASPECT_RATIOS = [
-    { label: "1:1", value: "1:1" },
-    { label: "16:9", value: "16:9" },
-    { label: "9:16", value: "9:16" },
-    { label: "4:3", value: "4:3" },
-    { label: "3:4", value: "3:4" },
+    { label: "1:1", value: "1:1", tag: "Square", w: 14, h: 14 },
+    { label: "16:9", value: "16:9", tag: "Wide", w: 18, h: 10 },
+    { label: "9:16", value: "9:16", tag: "Portrait", w: 10, h: 18 },
+    { label: "4:3", value: "4:3", tag: "Classic", w: 16, h: 12 },
+    { label: "3:4", value: "3:4", tag: "Tall", w: 12, h: 16 },
+    { label: "3:2", value: "3:2", tag: "Photo", w: 18, h: 12 },
+    { label: "2:3", value: "2:3", tag: "Film", w: 12, h: 18 },
+    { label: "21:9", value: "21:9", tag: "Ultra", w: 21, h: 9 },
 ];
 
 /**
@@ -124,7 +127,27 @@ export default function BatchPage() {
         item: BatchImage;
         idx: number;
     } | null>(null);
+    const [ratioOpen, setRatioOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const ratioDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close ratio dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                ratioDropdownRef.current &&
+                !ratioDropdownRef.current.contains(e.target as Node)
+            ) {
+                setRatioOpen(false);
+            }
+        };
+        if (ratioOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [ratioOpen]);
+
+    const selectedRatio = ASPECT_RATIOS.find((r) => r.value === aspectRatio) || ASPECT_RATIOS[0];
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
@@ -415,7 +438,7 @@ export default function BatchPage() {
                             <textarea
                                 id="batchPrompts"
                                 className="prompt-textarea batch-textarea"
-                                placeholder={`1. Pewter City Gym – Rock Type (Brock)\nUltra-photorealistic cinematic still...\n\n2. Vermilion City Gym – Electric Type\nAnother detailed prompt here...\n\nShared Negative Prompt\ncartoon, anime, low quality...`}
+                                placeholder={`1. Golden Hour Mountain Lake\nA breathtaking ultra-realistic photograph of a serene mountain lake at golden hour, reflections on still water...\n\n2. Neon-Lit Tokyo Alley\nA cinematic photo of a narrow Tokyo alley at night, glowing neon signs, wet pavement reflections...\n\n3. Abstract Fluid Art\nA vibrant abstract fluid art composition with swirling metallic gold, deep blue, and coral pigments...\n\nShared Negative Prompt\nblurry, low quality, watermark, text...`}
                                 value={rawText}
                                 onChange={(e) => setRawText(e.target.value)}
                                 disabled={loading}
@@ -496,20 +519,47 @@ export default function BatchPage() {
                                     <option value="flash">Nano Banana Flash</option>
                                 </select>
                             </div>
-                            <div className="form-group">
+                            <div className="form-group" ref={ratioDropdownRef}>
                                 <label className="form-label">Aspect Ratio</label>
-                                <select
-                                    className="select-input"
-                                    value={aspectRatio}
-                                    onChange={(e) => setAspectRatio(e.target.value)}
+                                <button
+                                    type="button"
+                                    className="ratio-trigger"
+                                    onClick={() => !loading && setRatioOpen(!ratioOpen)}
                                     disabled={loading}
                                 >
-                                    {ASPECT_RATIOS.map((ar) => (
-                                        <option key={ar.value} value={ar.value}>
-                                            {ar.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <span
+                                        className="ratio-mini-shape"
+                                        style={{
+                                            width: selectedRatio.w,
+                                            height: selectedRatio.h,
+                                        }}
+                                    />
+                                    <span className="ratio-trigger-label">{selectedRatio.label}</span>
+                                    <span className="ratio-trigger-tag">{selectedRatio.tag}</span>
+                                    <span className={`ratio-chevron${ratioOpen ? " open" : ""}`}>&#x25BE;</span>
+                                </button>
+                                {ratioOpen && (
+                                    <div className="ratio-dropdown">
+                                        {ASPECT_RATIOS.map((ar) => (
+                                            <button
+                                                key={ar.value}
+                                                type="button"
+                                                className={`ratio-option${ar.value === aspectRatio ? " active" : ""}`}
+                                                onClick={() => {
+                                                    setAspectRatio(ar.value);
+                                                    setRatioOpen(false);
+                                                }}
+                                            >
+                                                <span
+                                                    className="ratio-mini-shape"
+                                                    style={{ width: ar.w, height: ar.h }}
+                                                />
+                                                <span className="ratio-option-label">{ar.label}</span>
+                                                <span className="ratio-option-tag">{ar.tag}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Resolution</label>
