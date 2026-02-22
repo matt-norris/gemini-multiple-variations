@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, DragEvent } from "react";
+import { useState, useCallback, useRef, useEffect, DragEvent } from "react";
 
 interface GeneratedImage {
     type: "image";
@@ -137,9 +137,27 @@ export default function Home() {
     const [completedCount, setCompletedCount] = useState(0);
     const [referenceImages, setReferenceImages] = useState<RefImage[]>([]);
     const [dragOver, setDragOver] = useState(false);
+    const [lightboxItem, setLightboxItem] = useState<{ item: GeneratedImage; idx: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const maxRefImages = model === "flash" ? 3 : 14;
+
+    // Close lightbox on Escape key
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setLightboxItem(null);
+        };
+        if (lightboxItem) {
+            document.addEventListener("keydown", handleKey);
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.removeEventListener("keydown", handleKey);
+            document.body.style.overflow = "";
+        };
+    }, [lightboxItem]);
 
     const applyPreset = (preset: NegativePreset) => {
         if (activePreset === preset.id) {
@@ -341,6 +359,9 @@ export default function Home() {
                         Create unique AI-generated image variations from a single prompt
                         using Google Gemini.
                     </p>
+                    <a href="/batch" className="beta-badge-link">
+                        Multi-Prompt Batch Generator <span className="beta-tag">BETA</span>
+                    </a>
                 </header>
 
                 {/* Model Toggle */}
@@ -697,12 +718,21 @@ export default function Home() {
                                             <span className="image-card-label">
                                                 Variation {idx + 1}
                                             </span>
-                                            <button
-                                                className="download-btn"
-                                                onClick={() => downloadImage(item, idx)}
-                                            >
-                                                &#x2193; Save
-                                            </button>
+                                            <div className="image-card-actions">
+                                                <button
+                                                    className="download-btn"
+                                                    onClick={() => setLightboxItem({ item, idx })}
+                                                    title="View fullscreen"
+                                                >
+                                                    &#x26F6; View
+                                                </button>
+                                                <button
+                                                    className="download-btn"
+                                                    onClick={() => downloadImage(item, idx)}
+                                                >
+                                                    &#x2193; Save
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -735,6 +765,44 @@ export default function Home() {
                     </div>
                 )}
             </div>
+
+            {/* Lightbox Modal */}
+            {lightboxItem && (
+                <div
+                    className="lightbox-overlay"
+                    onClick={() => setLightboxItem(null)}
+                >
+                    <div
+                        className="lightbox-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <img
+                            src={`data:${lightboxItem.item.mimeType};base64,${lightboxItem.item.data}`}
+                            alt={`Variation ${lightboxItem.idx + 1}`}
+                            className="lightbox-img"
+                        />
+                        <div className="lightbox-toolbar">
+                            <span className="lightbox-label">
+                                Variation {lightboxItem.idx + 1}
+                            </span>
+                            <div className="lightbox-actions">
+                                <button
+                                    className="lightbox-btn"
+                                    onClick={() => downloadImage(lightboxItem.item, lightboxItem.idx)}
+                                >
+                                    &#x2193; Download PNG
+                                </button>
+                                <button
+                                    className="lightbox-btn lightbox-close"
+                                    onClick={() => setLightboxItem(null)}
+                                >
+                                    &#x2715; Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
