@@ -18,11 +18,11 @@ interface GeneratedError {
 type GalleryItem = GeneratedImage | GeneratedError;
 
 const ASPECT_RATIOS = [
-    { label: "1:1 — Square", value: "1:1" },
-    { label: "16:9 — Landscape", value: "16:9" },
-    { label: "9:16 — Portrait", value: "9:16" },
-    { label: "4:3 — Classic", value: "4:3" },
-    { label: "3:4 — Tall", value: "3:4" },
+    { label: "1:1", subtitle: "Square", value: "1:1", w: 18, h: 18 },
+    { label: "16:9", subtitle: "Landscape", value: "16:9", w: 24, h: 14 },
+    { label: "9:16", subtitle: "Portrait", value: "9:16", w: 12, h: 22 },
+    { label: "4:3", subtitle: "Classic", value: "4:3", w: 22, h: 16 },
+    { label: "3:4", subtitle: "Tall", value: "3:4", w: 16, h: 22 },
 ];
 
 const IMAGE_SIZES = [
@@ -132,266 +132,246 @@ export default function Home() {
     return (
         <>
             {/* Background orbs */}
-            <div className="bg-glow">
+            <div className="bg-glow" aria-hidden="true">
                 <div className="bg-orb bg-orb--orange" />
                 <div className="bg-orb bg-orb--teal" />
                 <div className="bg-orb bg-orb--purple" />
                 <div className="bg-orb bg-orb--pink" />
             </div>
 
-            <div className="app-shell">
-                {/* ---- Sidebar ---- */}
-                <aside className="sidebar">
-                    <div className="sidebar-brand">
-                        <div className="brand-icon">✦</div>
-                        <div>
-                            <div className="brand-name">Gemini Variations</div>
-                            <div className="brand-sub">AI Image Generator</div>
-                        </div>
+            <div className="app-container">
+                {/* Header */}
+                <header className="app-header">
+                    <div className="brand-badge">
+                        <span className="brand-dot" />
+                        Gemini Variations
                     </div>
+                    <h1 className="app-title">
+                        Generate Multiple <span className="gradient-text">Image Variations</span>
+                    </h1>
+                    <p className="app-subtitle">
+                        Create unique AI-generated image variations from a single prompt using Google Gemini.
+                    </p>
+                </header>
 
-                    <div className="sidebar-section-label">Main</div>
-                    <button className="sidebar-item active">
-                        <span className="sidebar-item-icon">🎨</span>
-                        Generate
-                    </button>
-                    <button className="sidebar-item">
-                        <span className="sidebar-item-icon">🖼</span>
-                        Gallery
-                    </button>
-                    <button className="sidebar-item">
-                        <span className="sidebar-item-icon">📁</span>
-                        Saved
-                    </button>
-                    <button className="sidebar-item">
-                        <span className="sidebar-item-icon">⏳</span>
-                        History
-                    </button>
-
-                    <div className="sidebar-divider" />
-
-                    <div className="sidebar-section-label">Settings</div>
-                    <button className="sidebar-item">
-                        <span className="sidebar-item-icon">🔑</span>
-                        API Key
-                    </button>
-                    <button className="sidebar-item">
-                        <span className="sidebar-item-icon">⚙</span>
-                        Preferences
-                    </button>
-
-                    <div className="sidebar-divider" />
-
-                    <div className="sidebar-section-label">Presets</div>
-                    <div className="sidebar-topic">
-                        <span className="topic-dot topic-dot--orange" />
-                        Photorealistic
-                    </div>
-                    <div className="sidebar-topic">
-                        <span className="topic-dot topic-dot--pink" />
-                        Illustration
-                    </div>
-                    <div className="sidebar-topic">
-                        <span className="topic-dot topic-dot--purple" />
-                        Abstract
-                    </div>
-                </aside>
-
-                {/* ---- Main Content ---- */}
-                <main className="main-content">
-                    {/* Greeting */}
-                    <div className="greeting">
-                        <div className="greeting-hello">Hello, Creator</div>
-                        <div className="greeting-question">What will you generate today?</div>
-                    </div>
-
-                    {/* Workspace pills - aspect ratio quick select */}
-                    <div className="workspace-bar">
-                        <span className="workspace-label">Ratio</span>
+                {/* Aspect Ratio Selector */}
+                <div className="ratio-section">
+                    <span className="ratio-section-label">Aspect Ratio</span>
+                    <div className="ratio-grid">
                         {ASPECT_RATIOS.map((ar) => (
                             <button
                                 key={ar.value}
-                                className={`workspace-pill${aspectRatio === ar.value ? " active" : ""}`}
+                                className={`ratio-card${aspectRatio === ar.value ? " active" : ""}`}
                                 onClick={() => setAspectRatio(ar.value)}
                                 disabled={loading}
                             >
-                                {ar.label}
+                                <div
+                                    className="ratio-preview"
+                                    style={{ width: ar.w, height: ar.h }}
+                                />
+                                <div className="ratio-label">{ar.label}</div>
+                                <div className="ratio-subtitle">{ar.subtitle}</div>
                             </button>
                         ))}
                     </div>
+                </div>
 
-                    {/* Prompt Card */}
-                    <div className="rainbow-card">
-                        <div className="rainbow-card-inner">
-                            <div className="card-header">
-                                <h2 className="card-title">Create Variations</h2>
-                                <div className="card-actions">
-                                    <button className="icon-btn" title="Clear" onClick={() => { setPrompt(""); setNegativePrompt(""); }}>✕</button>
-                                </div>
+                {/* Prompt Card */}
+                <div className="rainbow-card">
+                    <div className="rainbow-card-inner">
+                        <div className="card-header">
+                            <h2 className="card-title">Create Variations</h2>
+                            <div className="card-actions">
+                                <button
+                                    className="icon-btn"
+                                    title="Clear"
+                                    onClick={() => {
+                                        setPrompt("");
+                                        setNegativePrompt("");
+                                    }}
+                                >
+                                    &#x2715;
+                                </button>
                             </div>
+                        </div>
 
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="prompt">Prompt</label>
-                                <textarea
-                                    id="prompt"
-                                    className="prompt-textarea"
-                                    placeholder="Describe the image you want to generate…"
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    disabled={loading}
-                                />
-                            </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="prompt">
+                                Prompt
+                            </label>
+                            <textarea
+                                id="prompt"
+                                className="prompt-textarea"
+                                placeholder="Describe the image you want to generate..."
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
 
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="negativePrompt">
+                                Negative Prompt{" "}
+                                <span className="hint">(things to avoid)</span>
+                            </label>
+                            <input
+                                id="negativePrompt"
+                                className="text-input"
+                                type="text"
+                                placeholder="e.g. blurry, distorted, watermark, low quality..."
+                                value={negativePrompt}
+                                onChange={(e) => setNegativePrompt(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+
+                        <div className="settings-grid">
                             <div className="form-group">
-                                <label className="form-label" htmlFor="negativePrompt">
-                                    Negative Prompt <span className="hint">(things to avoid)</span>
+                                <label className="form-label" htmlFor="imageSize">
+                                    Resolution
                                 </label>
-                                <input
-                                    id="negativePrompt"
-                                    className="text-input"
-                                    type="text"
-                                    placeholder="e.g. blurry, distorted, watermark, low quality…"
-                                    value={negativePrompt}
-                                    onChange={(e) => setNegativePrompt(e.target.value)}
+                                <select
+                                    id="imageSize"
+                                    className="select-input"
+                                    value={imageSize}
+                                    onChange={(e) => setImageSize(e.target.value)}
                                     disabled={loading}
-                                />
+                                >
+                                    {IMAGE_SIZES.map((sz) => (
+                                        <option key={sz.value} value={sz.value}>
+                                            {sz.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-
-                            <div className="settings-grid">
-                                <div className="form-group">
-                                    <label className="form-label" htmlFor="imageSize">Resolution</label>
-                                    <select
-                                        id="imageSize"
-                                        className="select-input"
-                                        value={imageSize}
-                                        onChange={(e) => setImageSize(e.target.value)}
-                                        disabled={loading}
-                                    >
-                                        {IMAGE_SIZES.map((sz) => (
-                                            <option key={sz.value} value={sz.value}>{sz.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Variations</label>
-                                    <div className="count-pills">
-                                        {COUNTS.map((n) => (
-                                            <button
-                                                key={n}
-                                                className={`count-pill${count === n ? " active" : ""}`}
-                                                onClick={() => setCount(n)}
-                                                disabled={loading}
-                                            >
-                                                {n}
-                                            </button>
-                                        ))}
-                                    </div>
+                            <div className="form-group">
+                                <label className="form-label">Variations</label>
+                                <div className="count-pills">
+                                    {COUNTS.map((n) => (
+                                        <button
+                                            key={n}
+                                            className={`count-pill${count === n ? " active" : ""}`}
+                                            onClick={() => setCount(n)}
+                                            disabled={loading}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
+                        </div>
 
-                            <button
-                                className="generate-btn"
-                                onClick={handleGenerate}
-                                disabled={loading || !prompt.trim()}
-                            >
-                                <span className="btn-content">
-                                    {loading ? (
-                                        <>
-                                            <span className="spinner" />
-                                            Generating…
-                                        </>
-                                    ) : (
-                                        <>✦ Generate Variations</>
-                                    )}
-                                </span>
-                            </button>
+                        <button
+                            className="generate-btn"
+                            onClick={handleGenerate}
+                            disabled={loading || !prompt.trim()}
+                        >
+                            <span className="btn-content">
+                                {loading ? (
+                                    <>
+                                        <span className="spinner" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>&#x2726; Generate Variations</>
+                                )}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Progress */}
+                {loading && (
+                    <div className="progress-section">
+                        <div className="progress-info">
+                            <span className="progress-label">Generating images...</span>
+                            <span className="progress-count">
+                                {completedCount} / {count}
+                            </span>
+                        </div>
+                        <div className="progress-track">
+                            <div
+                                className="progress-fill"
+                                style={{ width: `${(completedCount / count) * 100}%` }}
+                            />
                         </div>
                     </div>
+                )}
 
-                    {/* Progress */}
-                    {loading && (
-                        <div className="progress-section">
-                            <div className="progress-info">
-                                <span className="progress-label">Generating images…</span>
-                                <span className="progress-count">{completedCount} / {count}</span>
-                            </div>
-                            <div className="progress-track">
-                                <div
-                                    className="progress-fill"
-                                    style={{ width: `${(completedCount / count) * 100}%` }}
-                                />
-                            </div>
+                {/* Gallery */}
+                {gallery.length > 0 && (
+                    <div className="gallery-section">
+                        <div className="gallery-header">
+                            <h2 className="gallery-title">Generated Variations</h2>
+                            <span className="gallery-count">
+                                {gallery.filter((g) => g.type === "image").length} image
+                                {gallery.filter((g) => g.type === "image").length !== 1
+                                    ? "s"
+                                    : ""}
+                            </span>
                         </div>
-                    )}
 
-                    {/* Gallery */}
-                    {gallery.length > 0 && (
-                        <div className="gallery-section">
-                            <div className="gallery-header">
-                                <h2 className="gallery-title">Generated Variations</h2>
-                                <span className="gallery-count">
-                                    {gallery.filter((g) => g.type === "image").length} image
-                                    {gallery.filter((g) => g.type === "image").length !== 1 ? "s" : ""}
-                                </span>
-                            </div>
-
-                            <div className="gallery-grid">
-                                {gallery.map((item, idx) => {
-                                    if (item.type === "error") {
-                                        return (
-                                            <div key={idx} className="error-card">
-                                                <span className="error-icon">⚠</span>
-                                                <span className="error-text">{item.error}</span>
-                                            </div>
-                                        );
-                                    }
+                        <div className="gallery-grid">
+                            {gallery.map((item, idx) => {
+                                if (item.type === "error") {
                                     return (
-                                        <div
-                                            key={idx}
-                                            className="image-card"
-                                            style={{ animationDelay: `${idx * 0.08}s` }}
-                                        >
-                                            <img
-                                                src={`data:${item.mimeType};base64,${item.data}`}
-                                                alt={`Variation ${idx + 1}`}
-                                            />
-                                            <div className="image-card-footer">
-                                                <span className="image-card-label">Variation {idx + 1}</span>
-                                                <button
-                                                    className="download-btn"
-                                                    onClick={() => downloadImage(item, idx)}
-                                                >
-                                                    ↓ Save
-                                                </button>
-                                            </div>
+                                        <div key={idx} className="error-card">
+                                            <span className="error-icon">&#x26A0;</span>
+                                            <span className="error-text">{item.error}</span>
                                         </div>
                                     );
-                                })}
-
-                                {loading &&
-                                    Array.from({ length: Math.max(0, count - completedCount) }).map((_, i) => (
-                                        <div key={`ph-${i}`} className="placeholder-card">
-                                            <div className="placeholder-inner">
-                                                <div className="placeholder-icon">✦</div>
-                                                <div className="placeholder-text">Generating…</div>
-                                            </div>
+                                }
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="image-card"
+                                        style={{ animationDelay: `${idx * 0.08}s` }}
+                                    >
+                                        <img
+                                            src={`data:${item.mimeType};base64,${item.data}`}
+                                            alt={`Variation ${idx + 1}`}
+                                        />
+                                        <div className="image-card-footer">
+                                            <span className="image-card-label">
+                                                Variation {idx + 1}
+                                            </span>
+                                            <button
+                                                className="download-btn"
+                                                onClick={() => downloadImage(item, idx)}
+                                            >
+                                                &#x2193; Save
+                                            </button>
                                         </div>
-                                    ))}
-                            </div>
-                        </div>
-                    )}
+                                    </div>
+                                );
+                            })}
 
-                    {/* Empty State */}
-                    {!loading && gallery.length === 0 && (
-                        <div className="empty-state">
-                            <div className="empty-icon">🎨</div>
-                            <div className="empty-title">No images yet</div>
-                            <div className="empty-subtitle">
-                                Enter a prompt above and click Generate to create AI image variations
-                            </div>
+                            {loading &&
+                                Array.from({
+                                    length: Math.max(0, count - completedCount),
+                                }).map((_, i) => (
+                                    <div key={`ph-${i}`} className="placeholder-card">
+                                        <div className="placeholder-inner">
+                                            <div className="placeholder-icon">&#x2726;</div>
+                                            <div className="placeholder-text">Generating...</div>
+                                        </div>
+                                    </div>
+                                ))}
                         </div>
-                    )}
-                </main>
+                    </div>
+                )}
+
+                {/* Empty State */}
+                {!loading && gallery.length === 0 && (
+                    <div className="empty-state">
+                        <div className="empty-icon">&#x2726;</div>
+                        <div className="empty-title">No images yet</div>
+                        <div className="empty-subtitle">
+                            Enter a prompt above and click Generate to create AI image
+                            variations
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

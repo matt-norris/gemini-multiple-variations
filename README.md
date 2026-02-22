@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gemini Multiple Variations
+
+Generate multiple AI image variations from a single prompt using Google's **Gemini** image generation model (`gemini-3-pro-image-preview`).
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+---
+
+## Features
+
+- **Multiple Variations** — Generate 1–8 unique image variations from one prompt
+- **Negative Prompts** — Specify what to avoid (blur, artifacts, watermarks, etc.)
+- **Aspect Ratio** — Choose from 1:1, 16:9, 9:16, 4:3, or 3:4
+- **Resolution** — Select 512px, 1K, or 2K output size
+- **Real-Time Streaming** — Images appear progressively as they're generated via SSE
+- **One-Click Download** — Save any generated image directly to your device
+- **Progress Tracking** — Visual progress bar shows generation status
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+ installed
+- A [Google Gemini API key](https://aistudio.google.com/apikey)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/gemini-multiple-variations.git
+cd gemini-multiple-variations
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Your API Key
+
+Create a `.env.local` file in the project root (or edit the existing one):
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+> **Note:** `.env.local` is included in `.gitignore` and will **never** be committed to version control. Your API key stays safe.
+
+### 4. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How It Works
 
-## Learn More
+1. **Enter a prompt** describing the image you want
+2. *(Optional)* Add a **negative prompt** to avoid unwanted features
+3. **Select** your preferred aspect ratio, resolution, and number of variations
+4. Click **Generate Variations**
+5. Images are generated **sequentially** via the Gemini API and streamed to your browser in real-time
+6. **Download** any image with a single click
 
-To learn more about Next.js, take a look at the following resources:
+### Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+Browser (page.tsx)
+    │
+    ├── POST /api/generate
+    │       │
+    │       ├── Loop N times (sequential)
+    │       │       └── Gemini API → generateContentStream()
+    │       │
+    │       └── SSE stream (image data as base64)
+    │
+    └── Render images in gallery as they arrive
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Technology | Purpose |
+|---|---|
+| [Next.js 16](https://nextjs.org/) | React framework with App Router |
+| [TypeScript](https://www.typescriptlang.org/) | Type safety |
+| [@google/genai](https://www.npmjs.com/package/@google/genai) | Google Gemini SDK |
+| Vanilla CSS | Custom dark theme with gradient accents |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Project Structure
+
+```
+gemini-multiple-variations/
+├── app/
+│   ├── api/
+│   │   └── generate/
+│   │       └── route.ts        # API route — sequential image generation with SSE
+│   ├── globals.css             # Dark theme design system
+│   ├── layout.tsx              # Root layout with metadata
+│   └── page.tsx                # Main UI — controls, gallery, progress
+├── .env.local                  # Your API key (not committed)
+├── .gitignore
+├── package.json
+└── README.md
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes | Your Google Gemini API key from [AI Studio](https://aistudio.google.com/apikey) |
+
+---
+
+## License
+
+MIT
