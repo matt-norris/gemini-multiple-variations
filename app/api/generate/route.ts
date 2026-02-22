@@ -1,7 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextRequest } from "next/server";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
+
+interface ReferenceImage {
+    data: string;
+    mimeType: string;
+}
 
 interface GenerateRequest {
     prompt: string;
@@ -9,6 +14,9 @@ interface GenerateRequest {
     count: number;
     aspectRatio: string;
     imageSize: string;
+    model: string;
+    referenceImages: ReferenceImage[];
+    enableSearch: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -21,7 +29,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body: GenerateRequest = await req.json();
-    const { prompt, negativePrompt, count, aspectRatio, imageSize } = body;
+    const {
+        prompt,
+        negativePrompt,
+        count,
+        aspectRatio,
+        imageSize,
+        model,
+        referenceImages,
+        enableSearch,
+    } = body;
 
     if (!prompt) {
         return new Response(
@@ -31,6 +48,18 @@ export async function POST(req: NextRequest) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
+
+    // Determine model name
+    const modelName =
+        model === "flash" ? "gemini-2.5-flash-image" : "gemini-3-pro-image-preview";
+
+    // Flash model only supports up to 3 ref images, Pro supports up to 14
+    const maxRefImages = model === "flash" ? 3 : 14;
+    const images = (referenceImages || []).slice(0, maxRefImages);
+
+    // Flash only supports 1K
+    const resolvedImageSize =
+        model === "flash" ? undefined : imageSize || "1K";
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -49,23 +78,45 @@ export async function POST(req: NextRequest) {
                         fullPrompt += `\n\nGenerate a unique variation #${i + 1}. Make it distinctly different from previous variations while keeping the same subject and theme.`;
                     }
 
-                    const config = {
+                    // Build parts array: text + reference images
+                    const parts: Array<
+                        | { text: string }
+                        | { inlineData: { data: string; mimeType: string } }
+                    > = [{ text: fullPrompt }];
+
+                    // Add reference images as inline data parts
+                    for (const img of images) {
+                        parts.push({
+                            inlineData: {
+                                data: img.data,
+                                mimeType: img.mimeType || "image/png",
+                            },
+                        });
+                    }
+
+                    // Build config
+                    const config: Record<string, unknown> = {
                         responseModalities: ["IMAGE", "TEXT"] as string[],
                         imageConfig: {
                             aspectRatio: aspectRatio || "1:1",
-                            imageSize: imageSize || "1K",
+                            ...(resolvedImageSize && { imageSize: resolvedImageSize }),
                         },
                     };
+
+                    // Add Google Search tool if enabled (Pro model only)
+                    if (enableSearch && model !== "flash") {
+                        config.tools = [{ googleSearch: {} }];
+                    }
 
                     const contents = [
                         {
                             role: "user" as const,
-                            parts: [{ text: fullPrompt }],
+                            parts,
                         },
                     ];
 
                     const response = await ai.models.generateContentStream({
-                        model: "gemini-3-pro-image-preview",
+                        model: modelName,
                         config,
                         contents,
                     });
@@ -79,23 +130,28 @@ export async function POST(req: NextRequest) {
                             continue;
                         }
 
-                        const part = chunk.candidates[0].content.parts[0];
-                        if (part?.inlineData) {
-                            const data = JSON.stringify({
-                                type: "image",
-                                index: i,
-                                mimeType: part.inlineData.mimeType,
-                                data: part.inlineData.data,
-                            });
-                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                            imageFound = true;
-                        } else if (chunk.text) {
-                            const data = JSON.stringify({
-                                type: "text",
-                                index: i,
-                                text: chunk.text,
-                            });
-                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                        for (const part of chunk.candidates[0].content.parts) {
+                            if (part?.inlineData && !part.thought) {
+                                const data = JSON.stringify({
+                                    type: "image",
+                                    index: i,
+                                    mimeType: part.inlineData.mimeType,
+                                    data: part.inlineData.data,
+                                });
+                                controller.enqueue(
+                                    encoder.encode(`data: ${data}\n\n`)
+                                );
+                                imageFound = true;
+                            } else if (part?.text && !part.thought) {
+                                const data = JSON.stringify({
+                                    type: "text",
+                                    index: i,
+                                    text: part.text,
+                                });
+                                controller.enqueue(
+                                    encoder.encode(`data: ${data}\n\n`)
+                                );
+                            }
                         }
                     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, DragEvent } from "react";
 
 interface GeneratedImage {
     type: "image";
@@ -17,19 +17,34 @@ interface GeneratedError {
 
 type GalleryItem = GeneratedImage | GeneratedError;
 
+interface RefImage {
+    id: string;
+    data: string;
+    mimeType: string;
+    preview: string;
+    name: string;
+}
+
 const ASPECT_RATIOS = [
     { label: "1:1", subtitle: "Square", value: "1:1", w: 18, h: 18 },
-    { label: "16:9", subtitle: "Landscape", value: "16:9", w: 24, h: 14 },
+    { label: "16:9", subtitle: "Wide", value: "16:9", w: 24, h: 14 },
     { label: "9:16", subtitle: "Portrait", value: "9:16", w: 12, h: 22 },
     { label: "4:3", subtitle: "Classic", value: "4:3", w: 22, h: 16 },
     { label: "3:4", subtitle: "Tall", value: "3:4", w: 16, h: 22 },
+    { label: "3:2", subtitle: "Photo", value: "3:2", w: 24, h: 16 },
+    { label: "2:3", subtitle: "Film", value: "2:3", w: 14, h: 22 },
+    { label: "5:4", subtitle: "Print", value: "5:4", w: 22, h: 18 },
+    { label: "4:5", subtitle: "Social", value: "4:5", w: 16, h: 20 },
+    { label: "21:9", subtitle: "Ultra", value: "21:9", w: 28, h: 12 },
 ];
 
-const IMAGE_SIZES = [
-    { label: "512px", value: "512" },
+const IMAGE_SIZES_PRO = [
     { label: "1K", value: "1K" },
     { label: "2K", value: "2K" },
+    { label: "4K", value: "4K" },
 ];
+
+const IMAGE_SIZES_FLASH = [{ label: "1K", value: "1K" }];
 
 const COUNTS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -47,56 +62,64 @@ const NEGATIVE_PRESETS: NegativePreset[] = [
         name: "General Quality",
         icon: "\u2726",
         color: "#a1a1aa",
-        prompts: "worst quality, low quality, blurry, pixelated, grainy, jpeg artifacts, watermark, text, signature, logo, overexposed, underexposed, cropped, out of frame, out of focus, ugly, error",
+        prompts:
+            "worst quality, low quality, blurry, pixelated, grainy, jpeg artifacts, watermark, text, signature, logo, overexposed, underexposed, cropped, out of frame, out of focus, ugly, error",
     },
     {
         id: "photorealistic",
         name: "Photorealistic",
         icon: "\u25CB",
         color: "#3b82f6",
-        prompts: "cartoon, anime, illustration, painting, drawing, sketch, 3d render, cgi, digital art, artwork, 2d, flat, monochrome, unrealistic, artificial, plastic, fake, bad photography, grainy, noisy, worst quality, blurry, watermark",
+        prompts:
+            "cartoon, anime, illustration, painting, drawing, sketch, 3d render, cgi, digital art, artwork, 2d, flat, monochrome, unrealistic, artificial, plastic, fake, bad photography, grainy, noisy, worst quality, blurry, watermark",
     },
     {
         id: "cartoon",
         name: "Cartoon / Illustration",
         icon: "\u25B3",
         color: "#f97316",
-        prompts: "photorealistic, realistic, photo, photography, 3d, hyperrealistic, unnatural shading, blurry outlines, uninspired, generic, amateurish, incomplete, messy, cluttered, unappealing colors, inconsistent art style, worst quality, watermark, text",
+        prompts:
+            "photorealistic, realistic, photo, photography, 3d, hyperrealistic, unnatural shading, blurry outlines, uninspired, generic, amateurish, incomplete, messy, cluttered, unappealing colors, inconsistent art style, worst quality, watermark, text",
     },
     {
         id: "portrait",
         name: "Portrait",
         icon: "\u25C7",
         color: "#ec4899",
-        prompts: "bad anatomy, wrong anatomy, deformed, disfigured, mutated, extra limbs, extra fingers, missing fingers, poorly drawn hands, poorly drawn face, cloned face, asymmetrical face, distorted features, ugly textures, bad hair, long neck, flat lighting, awkward angles, stiff pose, unnatural expression, worst quality, blurry, watermark",
+        prompts:
+            "bad anatomy, wrong anatomy, deformed, disfigured, mutated, extra limbs, extra fingers, missing fingers, poorly drawn hands, poorly drawn face, cloned face, asymmetrical face, distorted features, ugly textures, bad hair, long neck, flat lighting, awkward angles, stiff pose, unnatural expression, worst quality, blurry, watermark",
     },
     {
         id: "landscape",
         name: "Landscape / Nature",
         icon: "\u25C6",
         color: "#22c55e",
-        prompts: "people, person, buildings, urban, vehicles, cars, text, watermark, simple background, plain background, overexposed, underexposed, distorted, deformed structures, low contrast, dark, macro, portrait, multiple angles, white spots, worst quality, blurry",
+        prompts:
+            "people, person, buildings, urban, vehicles, cars, text, watermark, simple background, plain background, overexposed, underexposed, distorted, deformed structures, low contrast, dark, macro, portrait, multiple angles, white spots, worst quality, blurry",
     },
     {
         id: "abstract",
         name: "Abstract Art",
         icon: "\u25CE",
         color: "#a855f7",
-        prompts: "photorealistic, realistic, photo, text, watermark, logo, face, person, recognizable objects, cluttered, busy, muddy colors, low contrast, grainy, pixelated, worst quality, blurry, generic, cliched, low resolution",
+        prompts:
+            "photorealistic, realistic, photo, text, watermark, logo, face, person, recognizable objects, cluttered, busy, muddy colors, low contrast, grainy, pixelated, worst quality, blurry, generic, cliched, low resolution",
     },
     {
         id: "product",
         name: "Product Shot",
         icon: "\u25A1",
         color: "#14b8a6",
-        prompts: "blurry, out of focus, bad lighting, harsh shadows, cluttered background, distracting elements, distorted, warped, low resolution, pixelated, watermark, text, logo, people, hands, worst quality, overexposed, underexposed, grainy",
+        prompts:
+            "blurry, out of focus, bad lighting, harsh shadows, cluttered background, distracting elements, distorted, warped, low resolution, pixelated, watermark, text, logo, people, hands, worst quality, overexposed, underexposed, grainy",
     },
     {
         id: "food",
         name: "Food Photography",
         icon: "\u25CF",
         color: "#eab308",
-        prompts: "unappetizing, blurry, out of focus, bad lighting, harsh shadows, cluttered, messy background, distorted, artificial looking, plastic, overcooked, raw, worst quality, low resolution, watermark, text, people, hands, grainy, dull colors",
+        prompts:
+            "unappetizing, blurry, out of focus, bad lighting, harsh shadows, cluttered, messy background, distorted, artificial looking, plastic, overcooked, raw, worst quality, low resolution, watermark, text, people, hands, grainy, dull colors",
     },
 ];
 
@@ -107,19 +130,71 @@ export default function Home() {
     const [count, setCount] = useState(4);
     const [aspectRatio, setAspectRatio] = useState("1:1");
     const [imageSize, setImageSize] = useState("1K");
+    const [model, setModel] = useState<"pro" | "flash">("pro");
+    const [enableSearch, setEnableSearch] = useState(false);
     const [loading, setLoading] = useState(false);
     const [gallery, setGallery] = useState<GalleryItem[]>([]);
     const [completedCount, setCompletedCount] = useState(0);
+    const [referenceImages, setReferenceImages] = useState<RefImage[]>([]);
+    const [dragOver, setDragOver] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const maxRefImages = model === "flash" ? 3 : 14;
 
     const applyPreset = (preset: NegativePreset) => {
         if (activePreset === preset.id) {
-            // Deselect
             setActivePreset(null);
             setNegativePrompt("");
         } else {
             setActivePreset(preset.id);
             setNegativePrompt(preset.prompts);
         }
+    };
+
+    const processFiles = useCallback(
+        (files: FileList | File[]) => {
+            const remaining = maxRefImages - referenceImages.length;
+            const toProcess = Array.from(files).slice(0, remaining);
+
+            toProcess.forEach((file) => {
+                if (!file.type.startsWith("image/")) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const result = e.target?.result as string;
+                    // Strip the data:...;base64, prefix for API
+                    const base64 = result.split(",")[1];
+                    const newImage: RefImage = {
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                        data: base64,
+                        mimeType: file.type,
+                        preview: result,
+                        name: file.name,
+                    };
+                    setReferenceImages((prev) => [...prev, newImage].slice(0, maxRefImages));
+                };
+                reader.readAsDataURL(file);
+            });
+        },
+        [referenceImages.length, maxRefImages]
+    );
+
+    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setDragOver(false);
+        if (e.dataTransfer.files.length > 0) {
+            processFiles(e.dataTransfer.files);
+        }
+    };
+
+    const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setDragOver(true);
+    };
+
+    const handleDragLeave = () => setDragOver(false);
+
+    const removeImage = (id: string) => {
+        setReferenceImages((prev) => prev.filter((img) => img.id !== id));
     };
 
     const handleGenerate = useCallback(async () => {
@@ -139,6 +214,12 @@ export default function Home() {
                     count,
                     aspectRatio,
                     imageSize,
+                    model,
+                    enableSearch,
+                    referenceImages: referenceImages.map((img) => ({
+                        data: img.data,
+                        mimeType: img.mimeType,
+                    })),
                 }),
             });
 
@@ -198,7 +279,17 @@ export default function Home() {
         } finally {
             setLoading(false);
         }
-    }, [prompt, negativePrompt, count, aspectRatio, imageSize, loading]);
+    }, [
+        prompt,
+        negativePrompt,
+        count,
+        aspectRatio,
+        imageSize,
+        model,
+        enableSearch,
+        referenceImages,
+        loading,
+    ]);
 
     const downloadImage = async (item: GeneratedImage, idx: number) => {
         try {
@@ -213,17 +304,17 @@ export default function Home() {
             a.download = `variation_${idx + 1}.png`;
             document.body.appendChild(a);
             a.click();
-            // Small delay before cleanup to ensure download starts
             setTimeout(() => {
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
             }, 100);
-        } catch (err) {
-            // Fallback: open in new tab if download fails
+        } catch {
             const dataUrl = `data:${item.mimeType || "image/png"};base64,${item.data}`;
             window.open(dataUrl, "_blank");
         }
     };
+
+    const imageSizes = model === "flash" ? IMAGE_SIZES_FLASH : IMAGE_SIZES_PRO;
 
     return (
         <>
@@ -243,12 +334,52 @@ export default function Home() {
                         Gemini Variations
                     </div>
                     <h1 className="app-title">
-                        Generate Multiple <span className="gradient-text">Image Variations</span>
+                        Generate Multiple{" "}
+                        <span className="gradient-text">Image Variations</span>
                     </h1>
                     <p className="app-subtitle">
-                        Create unique AI-generated image variations from a single prompt using Google Gemini.
+                        Create unique AI-generated image variations from a single prompt
+                        using Google Gemini.
                     </p>
                 </header>
+
+                {/* Model Toggle */}
+                <div className="model-toggle-section">
+                    <span className="section-label">Model</span>
+                    <div className="model-toggle">
+                        <button
+                            className={`model-btn${model === "pro" ? " active" : ""}`}
+                            onClick={() => {
+                                setModel("pro");
+                            }}
+                            disabled={loading}
+                        >
+                            <span className="model-badge pro">PRO</span>
+                            Nano Banana Pro
+                        </button>
+                        <button
+                            className={`model-btn${model === "flash" ? " active" : ""}`}
+                            onClick={() => {
+                                setModel("flash");
+                                setImageSize("1K");
+                                setEnableSearch(false);
+                                // Trim ref images to 3 if switching to flash
+                                if (referenceImages.length > 3) {
+                                    setReferenceImages((prev) => prev.slice(0, 3));
+                                }
+                            }}
+                            disabled={loading}
+                        >
+                            <span className="model-badge flash">FLASH</span>
+                            Nano Banana
+                        </button>
+                    </div>
+                    <div className="model-info">
+                        {model === "pro"
+                            ? "Up to 14 reference images \u00B7 4K resolution \u00B7 Search grounding \u00B7 Advanced reasoning"
+                            : "Up to 3 reference images \u00B7 1K resolution \u00B7 Faster generation"}
+                    </div>
+                </div>
 
                 {/* Aspect Ratio Selector */}
                 <div className="ratio-section">
@@ -280,14 +411,93 @@ export default function Home() {
                             <div className="card-actions">
                                 <button
                                     className="icon-btn"
-                                    title="Clear"
+                                    title="Clear all"
                                     onClick={() => {
                                         setPrompt("");
                                         setNegativePrompt("");
+                                        setActivePreset(null);
+                                        setReferenceImages([]);
                                     }}
                                 >
                                     &#x2715;
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* Reference Image Upload */}
+                        <div className="form-group">
+                            <label className="form-label">
+                                Reference Images{" "}
+                                <span className="hint">
+                                    (up to {maxRefImages} {model === "pro" ? "— 6 objects + 5 people" : "images"})
+                                </span>
+                            </label>
+                            <div
+                                className={`upload-zone${dragOver ? " drag-over" : ""}${referenceImages.length > 0 ? " has-images" : ""}`}
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={(e) => {
+                                        if (e.target.files) processFiles(e.target.files);
+                                        e.target.value = "";
+                                    }}
+                                    style={{ display: "none" }}
+                                />
+
+                                {referenceImages.length === 0 ? (
+                                    <div className="upload-placeholder">
+                                        <div className="upload-icon">&#x2912;</div>
+                                        <div className="upload-text">
+                                            Drag &amp; drop images or click to browse
+                                        </div>
+                                        <div className="upload-hint">
+                                            PNG, JPG, WEBP supported
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="upload-thumbnails"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {referenceImages.map((img) => (
+                                            <div key={img.id} className="thumb-wrapper">
+                                                <img
+                                                    src={img.preview}
+                                                    alt={img.name}
+                                                    className="thumb-img"
+                                                />
+                                                <button
+                                                    className="thumb-remove"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        removeImage(img.id);
+                                                    }}
+                                                    title="Remove"
+                                                >
+                                                    &#x2715;
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {referenceImages.length < maxRefImages && (
+                                            <button
+                                                className="thumb-add"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    fileInputRef.current?.click();
+                                                }}
+                                            >
+                                                +
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -308,7 +518,9 @@ export default function Home() {
                         <div className="form-group">
                             <label className="form-label">
                                 Negative Prompt Presets{" "}
-                                <span className="hint">(click to apply, then edit below)</span>
+                                <span className="hint">
+                                    (click to apply, then edit below)
+                                </span>
                             </label>
                             <div className="preset-grid">
                                 {NEGATIVE_PRESETS.map((preset) => (
@@ -319,11 +531,20 @@ export default function Home() {
                                         disabled={loading}
                                         style={
                                             activePreset === preset.id
-                                                ? { borderColor: preset.color, color: preset.color, background: `${preset.color}10` }
+                                                ? {
+                                                    borderColor: preset.color,
+                                                    color: preset.color,
+                                                    background: `${preset.color}10`,
+                                                }
                                                 : undefined
                                         }
                                     >
-                                        <span className="preset-icon" style={{ color: preset.color }}>{preset.icon}</span>
+                                        <span
+                                            className="preset-icon"
+                                            style={{ color: preset.color }}
+                                        >
+                                            {preset.icon}
+                                        </span>
                                         {preset.name}
                                     </button>
                                 ))}
@@ -340,16 +561,7 @@ export default function Home() {
                                 className="negative-textarea"
                                 placeholder="Select a preset above or type your own negative prompts..."
                                 value={negativePrompt}
-                                onChange={(e) => {
-                                    setNegativePrompt(e.target.value);
-                                    // Clear active preset indicator if user edits away from it
-                                    if (activePreset) {
-                                        const preset = NEGATIVE_PRESETS.find((p) => p.id === activePreset);
-                                        if (preset && e.target.value !== preset.prompts) {
-                                            // Keep the preset visually but allow editing
-                                        }
-                                    }
-                                }}
+                                onChange={(e) => setNegativePrompt(e.target.value)}
                                 disabled={loading}
                             />
                         </div>
@@ -366,7 +578,7 @@ export default function Home() {
                                     onChange={(e) => setImageSize(e.target.value)}
                                     disabled={loading}
                                 >
-                                    {IMAGE_SIZES.map((sz) => (
+                                    {imageSizes.map((sz) => (
                                         <option key={sz.value} value={sz.value}>
                                             {sz.label}
                                         </option>
@@ -389,6 +601,27 @@ export default function Home() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Search Grounding Toggle (Pro only) */}
+                        {model === "pro" && (
+                            <div className="toggle-row">
+                                <div className="toggle-info">
+                                    <div className="toggle-label">Google Search Grounding</div>
+                                    <div className="toggle-hint">
+                                        Let the model use real-time data from Google Search
+                                    </div>
+                                </div>
+                                <button
+                                    className={`toggle-switch${enableSearch ? " on" : ""}`}
+                                    onClick={() => setEnableSearch(!enableSearch)}
+                                    disabled={loading}
+                                    role="switch"
+                                    aria-checked={enableSearch}
+                                >
+                                    <span className="toggle-thumb" />
+                                </button>
+                            </div>
+                        )}
 
                         <button
                             className="generate-btn"
