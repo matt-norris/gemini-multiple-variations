@@ -31,7 +31,7 @@ export default async function LandingPage() {
         <div className="landing-page">
             {/* Navigation */}
             <nav className="landing-nav">
-                <span className="nav-logo">Nano Banana Studio</span>
+                <span className="nav-logo">Open Banana</span>
                 <ul className="nav-links">
                     <li>
                         <Link href="/generate">Generate</Link>
@@ -60,10 +60,8 @@ export default async function LandingPage() {
                     </div>
 
                     <h1 className="hero-title">
-                        NANO{" "}
+                        OPEN{" "}
                         <span className="gradient-word">BANANA</span>
-                        <br />
-                        STUDIO
                     </h1>
 
                     <p className="hero-subtitle">

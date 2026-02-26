@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "Nano Banana Studio",
+    title: "Open Banana",
     description:
-        "Generate stunning AI image variations with Google Gemini. Space-themed creative studio powered by Nano Banana Pro & Flash.",
+        "Generate stunning AI image variations with Google Gemini. Open source creative studio powered by Open Banana Pro & Flash.",
 };
 
 export default function RootLayout({

@@ -334,8 +334,8 @@ export default function BatchPage() {
                             <div className="form-group">
                                 <label>Model</label>
                                 <select value={model} onChange={(e) => setModel(e.target.value as "pro" | "flash")} disabled={loading}>
-                                    <option value="pro">Nano Banana Pro</option>
-                                    <option value="flash">Nano Banana Flash</option>
+                                    <option value="pro">Open Banana Pro</option>
+                                    <option value="flash">Open Banana Flash</option>
                                 </select>
                             </div>
                             <div className="form-group" ref={ratioDropdownRef}>

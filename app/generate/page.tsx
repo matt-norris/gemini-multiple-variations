@@ -320,10 +320,10 @@ export default function GeneratePage() {
                             <span className="section-label">Model</span>
                             <div className="model-toggle">
                                 <button className={`model-btn${model === "pro" ? " active" : ""}`} onClick={() => setModel("pro")} disabled={loading}>
-                                    <span className="model-badge pro">PRO</span> Nano Banana Pro
+                                    <span className="model-badge pro">PRO</span> Open Banana Pro
                                 </button>
                                 <button className={`model-btn${model === "flash" ? " active" : ""}`} onClick={() => { setModel("flash"); setImageSize("1K"); setEnableSearch(false); if (referenceImages.length > 3) setReferenceImages((p) => p.slice(0, 3)); }} disabled={loading}>
-                                    <span className="model-badge flash">FLASH</span> Nano Banana
+                                    <span className="model-badge flash">FLASH</span> Open Banana Flash
                                 </button>
                             </div>
                             <div className="model-info">
