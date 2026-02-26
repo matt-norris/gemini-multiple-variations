@@ -46,6 +46,13 @@ export async function POST(req: NextRequest) {
             );
 
             for (let i = 0; i < prompts.length; i++) {
+                // Send progress event so client knows which prompt is being processed
+                controller.enqueue(
+                    encoder.encode(
+                        `data: ${JSON.stringify({ type: "progress", index: i, prompt: prompts[i].slice(0, 80) })}\n\n`
+                    )
+                );
+
                 try {
                     const config: Record<string, unknown> = {
                         responseModalities: ["IMAGE", "TEXT"] as string[],
@@ -67,6 +74,8 @@ export async function POST(req: NextRequest) {
                         },
                     ];
 
+                    // Use streaming — keepalive chunks prevent network timeouts
+                    // on long-running Pro model generations (2-10 min)
                     const response = await ai.models.generateContentStream({
                         model: modelName,
                         config,

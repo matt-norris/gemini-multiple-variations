@@ -17,6 +17,7 @@ interface GenerateRequest {
     model: string;
     referenceImages: ReferenceImage[];
     enableSearch: boolean;
+    generationMode: "variations" | "same";
 }
 
 export async function POST(req: NextRequest) {
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
         model,
         referenceImages,
         enableSearch,
+        generationMode,
     } = body;
 
     if (!prompt) {
@@ -73,20 +75,20 @@ export async function POST(req: NextRequest) {
                     if (negativePrompt) {
                         fullPrompt += `\n\nNegative prompt (avoid these): ${negativePrompt}`;
                     }
-                    // Add variation instruction for subsequent images
-                    if (i > 0) {
+                    // Add variation instruction for subsequent images (only in variations mode)
+                    if (i > 0 && generationMode !== "same") {
                         fullPrompt += `\n\nGenerate a unique variation #${i + 1}. Make it distinctly different from previous variations while keeping the same subject and theme.`;
                     }
 
                     // Build parts array: text + reference images
-                    const parts: Array<
+                    const requestParts: Array<
                         | { text: string }
                         | { inlineData: { data: string; mimeType: string } }
                     > = [{ text: fullPrompt }];
 
                     // Add reference images as inline data parts
                     for (const img of images) {
-                        parts.push({
+                        requestParts.push({
                             inlineData: {
                                 data: img.data,
                                 mimeType: img.mimeType || "image/png",
@@ -111,10 +113,12 @@ export async function POST(req: NextRequest) {
                     const contents = [
                         {
                             role: "user" as const,
-                            parts,
+                            parts: requestParts,
                         },
                     ];
 
+                    // Use streaming — keepalive chunks prevent network timeouts
+                    // on long-running Pro model generations (2-10 min)
                     const response = await ai.models.generateContentStream({
                         model: modelName,
                         config,
@@ -131,7 +135,7 @@ export async function POST(req: NextRequest) {
                         }
 
                         for (const part of chunk.candidates[0].content.parts) {
-                            if (part?.inlineData && !part.thought) {
+                            if (part?.inlineData) {
                                 const data = JSON.stringify({
                                     type: "image",
                                     index: i,

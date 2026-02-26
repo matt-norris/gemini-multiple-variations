@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "Gemini Multiple Variations",
+    title: "Nano Banana Studio",
     description:
-        "Generate multiple AI image variations with Google Gemini. Customize prompts, negative prompts, resolution, and aspect ratio.",
+        "Generate stunning AI image variations with Google Gemini. Space-themed creative studio powered by Nano Banana Pro & Flash.",
 };
 
 export default function RootLayout({
@@ -14,7 +14,11 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body>{children}</body>
+            <body>
+                <div className="starfield" />
+                <div className="nebula-glow" />
+                {children}
+            </body>
         </html>
     );
 }
